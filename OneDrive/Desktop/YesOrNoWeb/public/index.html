@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Yes or No — The Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { overflow: hidden; font-family: 'Inter', sans-serif; color: white; background: #0a0a1a; }
+        canvas { display: block; }
+
+        /* ══ USERNAME ENTRY SCREEN ══ */
+        #nameScreen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(135deg, #0a0a2e 0%, #1a1a3e 40%, #0d1b2a 100%);
+            display: flex; justify-content: center; align-items: center;
+            z-index: 9999; flex-direction: column;
+        }
+        #nameScreen .title {
+            font-family: 'Fredoka One', cursive;
+            font-size: 72px;
+            background: linear-gradient(135deg, #2ecc71, #3498db, #e74c3c);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 8px;
+        }
+        #nameScreen .subtitle {
+            font-size: 16px; color: rgba(255,255,255,0.35);
+            margin-bottom: 40px; letter-spacing: 3px; text-transform: uppercase;
+        }
+        #nameBox {
+            display: flex; flex-direction: column; align-items: center;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.08);
+            backdrop-filter: blur(20px);
+            border-radius: 20px; padding: 40px 50px;
+        }
+        #nameBox label {
+            font-size: 14px; font-weight: 700; color: rgba(255,255,255,0.55);
+            margin-bottom: 12px; letter-spacing: 2px; text-transform: uppercase;
+        }
+        #nameInput {
+            width: 280px; padding: 14px 20px;
+            font-family: 'Inter', sans-serif; font-size: 20px; font-weight: 600;
+            color: white; background: rgba(255,255,255,0.06);
+            border: 2px solid rgba(255,255,255,0.12);
+            border-radius: 12px; outline: none; text-align: center;
+            transition: border-color 0.3s, background 0.3s;
+        }
+        #nameInput:focus { border-color: #3498db; background: rgba(52,152,219,0.08); }
+        #nameInput::placeholder { color: rgba(255,255,255,0.2); }
+        #playBtn {
+            margin-top: 20px; padding: 14px 50px;
+            font-family: 'Fredoka One', cursive; font-size: 22px;
+            color: white; background: linear-gradient(135deg, #2ecc71, #27ae60);
+            border: none; border-radius: 12px; cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.3s;
+            box-shadow: 0 4px 20px rgba(46,204,113,0.3);
+        }
+        #playBtn:hover { transform: scale(1.05); box-shadow: 0 6px 30px rgba(46,204,113,0.5); }
+        #playBtn:active { transform: scale(0.97); }
+        .name-stars { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; overflow: hidden; }
+        .name-star {
+            position: absolute; width: 2px; height: 2px;
+            background: white; border-radius: 50%;
+            animation: twinkle 3s ease-in-out infinite alternate;
+        }
+        @keyframes twinkle { 0% { opacity: 0.1; } 100% { opacity: 0.8; } }
+
+        /* ══ GAME UI ══ */
+        #ui {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; user-select: none;
+        }
+
+        .hud {
+            position: absolute; top: 0; width: 100%;
+            display: flex; flex-direction: column; align-items: center;
+            padding-top: 14px;
+        }
+        #phase {
+            font-size: 13px; font-weight: 700; letter-spacing: 3px;
+            text-transform: uppercase; color: rgba(255,255,255,0.55);
+            margin-bottom: 3px;
+        }
+        #question {
+            font-family: 'Fredoka One', cursive; font-size: 30px;
+            text-shadow: 0 3px 16px rgba(0,0,0,0.8);
+            padding: 10px 30px; border-radius: 14px;
+            background: rgba(0,0,0,0.55); backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.08);
+            max-width: 85%; text-align: center;
+        }
+        #timer {
+            font-family: 'Fredoka One', cursive;
+            font-size: 52px; line-height: 1; margin-top: 2px;
+            text-shadow: 0 0 25px rgba(255,255,255,0.25);
+            transition: color 0.3s;
+        }
+        .phase-lobby #timer   { color: #3498db; }
+        .phase-round #timer   { color: #f1c40f; }
+        .phase-reveal #timer  { color: #e74c3c; }
+        .phase-between #timer { color: #9b59b6; }
+        .phase-gameover #timer { color: #f39c12; }
+
+        /* ── HP Bar ── */
+        #hpBar {
+            display: none;
+            position: absolute; bottom: 50px; left: 50%; transform: translateX(-50%);
+            width: 260px; height: 22px;
+            background: rgba(0,0,0,0.6); border-radius: 11px;
+            border: 2px solid rgba(255,255,255,0.15); overflow: hidden;
+        }
+        #hpFill { height: 100%; width: 100%; background: #2ecc71; border-radius: 9px; transition: width 0.5s ease, background 0.3s; }
+        #hpText { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: 12px; font-weight: 800; text-shadow: 0 1px 3px rgba(0,0,0,0.8); }
+
+        /* ── Player List Panel ── */
+        #playerList {
+            position: absolute; top: 50px; right: 18px;
+            width: 210px; max-height: 420px; overflow-y: auto;
+            background: rgba(0,0,0,0.5); backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 12px; pointer-events: all;
+        }
+        #playerList::-webkit-scrollbar { width: 4px; }
+        #playerList::-webkit-scrollbar-track { background: transparent; }
+        #playerList::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
+        #plHeader {
+            font-family: 'Fredoka One', cursive; font-size: 13px;
+            color: rgba(255,255,255,0.45); padding: 10px 14px 6px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            letter-spacing: 2px; text-transform: uppercase;
+        }
+        .pl-row {
+            display: flex; align-items: center; padding: 6px 14px;
+            border-bottom: 1px solid rgba(255,255,255,0.03);
+        }
+        .pl-row:last-child { border-bottom: none; }
+        .pl-dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            margin-right: 10px; flex-shrink: 0;
+        }
+        .pl-name {
+            font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.75);
+            flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .pl-name.is-you { color: #f1c40f; }
+        .pl-badge {
+            font-size: 9px; font-weight: 800; margin-left: 6px;
+            padding: 2px 6px; border-radius: 4px; text-transform: uppercase;
+        }
+        .badge-alive { background: rgba(46,204,113,0.2); color: #2ecc71; }
+        .badge-dead  { background: rgba(231,76,60,0.2); color: #e74c3c; }
+        .badge-lobby { background: rgba(52,152,219,0.2); color: #3498db; }
+
+        /* ── Side Labels ── */
+        .side-label {
+            position: absolute; bottom: 90px;
+            font-family: 'Fredoka One', cursive; font-size: 64px;
+            opacity: 0.12; text-shadow: 0 0 40px currentColor;
+        }
+        #yesLabel { left: 40px; color: #2ecc71; }
+        #noLabel  { right: 40px; color: #e74c3c; }
+
+        #info {
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.3); font-size: 11px; letter-spacing: 0.5px;
+        }
+        #playerCount {
+            position: absolute; top: 14px; right: 18px;
+            font-size: 12px; font-weight: 700;
+            color: rgba(255,255,255,0.65);
+            background: rgba(0,0,0,0.45); padding: 6px 16px; border-radius: 8px;
+            backdrop-filter: blur(6px); border: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .feedback {
+            display: none;
+            position: absolute; top: 45%; left: 50%; transform: translate(-50%,-50%);
+            font-family: 'Fredoka One', cursive; font-size: 42px;
+            padding: 14px 40px; border-radius: 16px;
+            text-shadow: 0 3px 12px rgba(0,0,0,0.6);
+            animation: feedPop 0.5s ease;
+        }
+        .ft-correct    { color: #2ecc71; background: rgba(46,204,113,0.15); border: 2px solid rgba(46,204,113,0.3); }
+        .ft-damaged    { color: #f39c12; background: rgba(243,156,18,0.15); border: 2px solid rgba(243,156,18,0.3); }
+        .ft-critical   { color: #e74c3c; background: rgba(231,76,60,0.15); border: 2px solid rgba(231,76,60,0.3); }
+        .ft-eliminated { color: #c0392b; background: rgba(192,57,43,0.2); border: 2px solid rgba(192,57,43,0.4); }
+        .ft-win        { color: #f1c40f; background: rgba(241,196,15,0.15); border: 2px solid rgba(241,196,15,0.3); }
+        @keyframes feedPop {
+            0% { transform: translate(-50%,-50%) scale(0.5); opacity: 0; }
+            60% { transform: translate(-50%,-50%) scale(1.1); }
+            100% { transform: translate(-50%,-50%) scale(1); opacity: 1; }
+        }
+
+        #deathOverlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(100, 15, 15, 0.3);
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        #deathOverlay h1 { font-family: 'Fredoka One', cursive; font-size: 56px; color: #e74c3c; text-shadow: 0 0 40px rgba(231,76,60,0.5); }
+        #deathOverlay p { font-size: 16px; color: rgba(255,255,255,0.6); margin-top: 6px; }
+
+        #winOverlay {
+            display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(241, 196, 15, 0.1);
+            justify-content: center; align-items: center; flex-direction: column;
+        }
+        #winnerText {
+            font-family: 'Fredoka One', cursive; font-size: 72px; color: #f1c40f;
+            text-shadow: 0 0 50px rgba(241,196,15,0.6);
+            animation: winPulse 1s infinite alternate;
+        }
+        @keyframes winPulse { from { transform: scale(1); } to { transform: scale(1.08); } }
+
+        @media (max-width: 600px) {
+            #question { font-size: 18px; padding: 8px 16px; }
+            #timer { font-size: 36px; }
+            .side-label { font-size: 36px; bottom: 70px; }
+            #hpBar { width: 180px; }
+            #nameScreen .title { font-size: 40px; }
+            #nameBox { padding: 24px 28px; }
+            #nameInput { width: 220px; font-size: 16px; }
+            #playerList { width: 150px; }
+        }
+    </style>
+</head>
+<body>
+    <!-- Username Entry -->
+    <div id="nameScreen">
+        <div class="name-stars" id="nameStars"></div>
+        <div class="title">YES or NO</div>
+        <div class="subtitle">The Ultimate Trivia Game</div>
+        <div id="nameBox">
+            <label>Choose Your Name</label>
+            <input type="text" id="nameInput" placeholder="Enter username..." maxlength="16" autocomplete="off" spellcheck="false">
+            <button id="playBtn">PLAY</button>
+        </div>
+    </div>
+
+    <!-- Game UI (hidden until play) -->
+    <div id="ui" style="display:none;">
+        <div id="hud" class="hud phase-lobby">
+            <div id="phase">LOBBY</div>
+            <div id="question">Connecting...</div>
+            <div id="timer">0</div>
+        </div>
+        <div id="playerCount">Players: 0</div>
+
+        <div id="playerList">
+            <div id="plHeader">Players</div>
+            <div id="plEntries"></div>
+        </div>
+
+        <div id="yesLabel" class="side-label">YES</div>
+        <div id="noLabel" class="side-label">NO</div>
+
+        <div id="hpBar">
+            <div id="hpFill"></div>
+            <div id="hpText">100%</div>
+        </div>
+
+        <div id="feedbackText" class="feedback"></div>
+        <div id="info">Right-click drag to orbit &nbsp;|&nbsp; WASD to move &nbsp;|&nbsp; Space to jump &nbsp;|&nbsp; Scroll to zoom</div>
+
+        <div id="deathOverlay">
+            <h1>ELIMINATED</h1>
+            <p>Spectating from lobby... Next match starts soon!</p>
+        </div>
+        <div id="winOverlay">
+            <div id="winnerText">YOU WIN!</div>
+        </div>
+    </div>
+
+    <script>
+        // Decorative stars on name screen
+        const starsC = document.getElementById('nameStars');
+        for (let i = 0; i < 80; i++) {
+            const s = document.createElement('div');
+            s.className = 'name-star';
+            s.style.left = Math.random() * 100 + '%';
+            s.style.top = Math.random() * 100 + '%';
+            s.style.animationDelay = (Math.random() * 3) + 's';
+            s.style.width = s.style.height = (1 + Math.random() * 2) + 'px';
+            starsC.appendChild(s);
+        }
+    </script>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
